@@ -7,14 +7,14 @@ from torch.optim import Adam
 from torch.nn import functional as F
 from torch.nn import (Dropout, LeakyReLU, Linear, Module, ReLU, Sequential,
 Conv2d, ConvTranspose2d, Sigmoid, init, BCELoss, CrossEntropyLoss,SmoothL1Loss,LayerNorm)
-from model.synthesizer.transformer import ImageTransformer,DataTransformer
-from model.privacy_utils.rdp_accountant import compute_rdp, get_privacy_spent
+from .transformer import ImageTransformer,DataTransformer
+from ..privacy_utils.rdp_accountant import compute_rdp, get_privacy_spent
 from tqdm import tqdm
 
 from ..privacy_utils.DP_controller import DP_controller
 
 
-from model.transformer2.transformer import DataTransformer as DataTransformer2
+
 
 class Classifier(Module):
     def __init__(self,input_dim, dis_dims,st_ed):

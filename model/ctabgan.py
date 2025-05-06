@@ -4,19 +4,19 @@ Generative model training algorithm based on the CTABGANSynthesiser
 """
 import pandas as pd
 import time
-from model.pipeline.data_preparation import DataPrep
-from model.synthesizer.ctabgan_synthesizer import CTABGANSynthesizer
+from .pipeline.data_preparation import DataPrep
+from .synthesizer.ctabgan_synthesizer import CTABGANSynthesizer
 
-from model.pipeline2.data_type_assigner import Data_type_assigner
-from model.pipeline2.data_preparation import DataPrep as DataPrep2
-from model.pipeline2.null_value_transformer import Null_value_transformer
+from .pipeline.data_type_assigner import Data_type_assigner
+from .pipeline.data_preparation import DataPrep as DataPrep2
+from .pipeline.null_value_transformer import Null_value_transformer
 
 
 import warnings
 
 warnings.filterwarnings("ignore")
 
-class CTABGAN():
+class CTAB_XTRA_DP():
 
     def __init__(self,
                  df,
