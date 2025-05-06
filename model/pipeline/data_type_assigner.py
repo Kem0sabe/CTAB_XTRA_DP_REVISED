@@ -2,15 +2,17 @@
 import warnings
 
 class Data_type_assigner:
-    def __init__(self, data,integer_columns = [],mixed_columns = {}):
+    def __init__(self, data,categorical_columns = [],mixed_columns = {}):
     
         self.data_type = data.dtypes
-        self.integer_columns = integer_columns + data.select_dtypes(include=['int64']).columns.tolist()
+        self.integer_columns = data.select_dtypes(include=['int64']).columns.tolist()
+        self.categorical_columns = categorical_columns
         self.mixed_columns = mixed_columns
-        for column in integer_columns:
-            if column not in self.data_type: 
+        for column in  self.integer_columns:
+            if column not in self.data_type:
                 warnings.warn(f"Column {column} not found in data, ignoring integer assignment")
                 continue
+            if column in self.categorical_columns: continue # If categogircal they return same type regardless
             if data[column].isna().any(): continue # If we have nan values, we cant assign the column to interger, however we still treat it as integer
             data[column] = data[column].astype(int)
         
@@ -34,6 +36,9 @@ class Data_type_assigner:
     def get_column_desimal(self, data):
         decimals = {}
         for column in data.columns:
+            if column in self.categorical_columns:
+                decimals[column] = None
+                continue
             if data[column].dtype != 'int64':
                 exclude_values = self.mixed_columns.get(column, [])
                 decimals[column] = data[column].apply(
