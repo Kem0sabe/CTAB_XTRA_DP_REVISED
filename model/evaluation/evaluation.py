@@ -26,22 +26,23 @@ warnings.filterwarnings("ignore")
 
 
 
-def get_summary_metrics(real,
+def get_summary_metrics(real_train,
+                        real_test,
                         fake,
                         categorical=[],
                         mixed={},
                         mnar=True,
                         problem="classification"):
 
-    simmlarity = stat_sim(real,fake,categorical,mixed,mnar)
+    simmlarity = stat_sim(real_train,fake,categorical,mixed,mnar)
     if problem == "regression":
       models_to_run = ["dt","rf","hgb","cat","xgb"]
     elif problem == "classification":
       models_to_run = ["lr","dt","rf","xgb"]
     else:
       raise ValueError("Problem type must be either 'classification' or 'regression'")
-    utility = get_utility_metrics(real,[fake],categorical=categorical, mixed=mixed,scaler="MinMax",problem=problem, models=models_to_run,test_ratio=.20)
-    privacy = privacy_metrics(real,fake,metric='gower')
+    utility = get_utility_metrics(real_train,real_test,[fake],categorical=categorical, mixed=mixed,scaler="MinMax",problem=problem, models=models_to_run,test_ratio=.20)
+    privacy = privacy_metrics(real_train,fake,metric='gower')
     return utility, simmlarity, privacy
 
 
@@ -118,7 +119,8 @@ def split_data(df, test_ratio=.20, target=None,problem="classification",random_s
   return train, test
 
 
-def get_utility_metrics(real,
+def get_utility_metrics(real_train,
+                        real_test,
                         fakes,
                         categorical=[],
                         mixed={},
@@ -129,30 +131,40 @@ def get_utility_metrics(real,
                         test_ratio=.20):
 
 
-    real = real.copy()
+    real_train = real_train.copy()
+    real_test = real_test.copy()
     categorical = categorical.copy()
 
     if target is None:
-      target = real.columns[-1]
+      target = real_train.columns[-1]
     
-    real, additional_categorical_cols, _=_process_mixed_columns(real, mixed, continuous_placeholder=np.nan)
+    real_train, additional_categorical_cols, _=_process_mixed_columns(real_train, mixed, continuous_placeholder=np.nan)
+
+    real_test, _, _=_process_mixed_columns(real_test, mixed, continuous_placeholder=np.nan)
 
     categorical.extend(additional_categorical_cols)
 
     # Encode categorical columns in the real dataset
     for col in categorical:
-      label_encoder = LabelEncoder()
-      real[col] = label_encoder.fit_transform(real[col])
-      
-    data_real_y = real.loc[:, target].to_numpy()
-    data_real_X = real.drop(target,axis=1).to_numpy()
+        # Combine both columns into one Series
+        combined = pd.concat([real_train[col], real_test[col]], axis=0)
 
-    data_dim = real.shape[1]
-  
-    if problem == "classification":
-      X_train_real, X_test_real, y_train_real, y_test_real = model_selection.train_test_split(data_real_X ,data_real_y, test_size=test_ratio, stratify=data_real_y,random_state=42) 
-    else:
-      X_train_real, X_test_real, y_train_real, y_test_real = model_selection.train_test_split(data_real_X ,data_real_y, test_size=test_ratio,random_state=42) 
+        # Fit encoder on the combined set
+        le = LabelEncoder()
+        le.fit(combined)
+
+        # Transform separately
+        real_train[col] = le.transform(real_train[col])
+        real_test[col] = le.transform(real_test[col])
+      
+      
+    data_dim = real_train.shape[1]
+
+    data_real_X_train = real_train.drop(target, axis=1).to_numpy()
+    data_real_y_train = real_train[target].to_numpy()
+
+    data_real_X_test = real_test.drop(target, axis=1).to_numpy()
+    data_real_y_test = real_test[target].to_numpy()
     
     # Apply scaling
     if scaler=="MinMax":
@@ -162,9 +174,9 @@ def get_utility_metrics(real,
     
 
     
-    scaler_real.fit(X_train_real)
-    X_train_real_scaled = scaler_real.transform(X_train_real)
-    X_test_real_scaled = scaler_real.transform(X_test_real)
+    scaler_real.fit(data_real_X_train)
+    X_train_real_scaled = scaler_real.transform(data_real_X_train)
+    X_test_real_scaled = scaler_real.transform(data_real_X_test)
 
 
 
@@ -176,7 +188,7 @@ def get_utility_metrics(real,
 
     all_real_results = []
     for model in models:
-      real_results = supervised_model_training(X_train_real_scaled,y_train_real,X_test_real_scaled,y_test_real,model,problem)
+      real_results = supervised_model_training(X_train_real_scaled,data_real_y_train,X_test_real_scaled,data_real_y_test,model,problem)
       all_real_results.append(real_results)
       
     all_fake_results_avg = []
@@ -216,7 +228,7 @@ def get_utility_metrics(real,
       
       all_fake_results = []
       for model in models:
-        fake_results = supervised_model_training(X_train_fake_scaled,y_train_fake,X_test_real_scaled,y_test_real,model,problem)
+        fake_results = supervised_model_training(X_train_fake_scaled,y_train_fake,X_test_real_scaled,data_real_y_test,model,problem)
         all_fake_results.append(fake_results)
 
       all_fake_results_avg.append(all_fake_results)
@@ -287,10 +299,17 @@ def column_similarity(real, fake, categorical=[]):
     real = real.copy()
     fake = fake.copy()
 
+
+
     for col in categorical:
-      label_encoder = LabelEncoder()
-      real[col] = label_encoder.fit_transform(real[col])
-      fake[col] = label_encoder.transform(fake[col])
+
+      combined = pd.concat([real[col], fake[col]], axis=0)
+
+      le = LabelEncoder()
+      le.fit(combined)
+
+      real[col] = le.transform(real[col])
+      fake[col] = le.transform(fake[col])
 
 
     column_stats = []

@@ -428,9 +428,7 @@ class DataTransformer():
                         result[idx] = u[idx] * 4 * std_t + mean_t
                         continous_values[idx] = result[idx]
                         
-                for idx,val in enumerate(np.full_like(u, np.nan, dtype=float)):
-                     if (val < info["min"]) | (val > info['max']):
-                         invalid_ids.append(idx)
+                invalid_ids = np.where(continous_values < info['min'])[0].tolist() + np.where(continous_values > info['max'])[0].tolist()
 
                 data_t[:, id_] = result
 
