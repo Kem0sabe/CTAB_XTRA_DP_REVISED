@@ -169,20 +169,27 @@ class Cond(object):
             
         return vec, mask, idx, opt1prime
 
-    def sample(self, batch):
-        if self.n_col == 0:
-            return None
-        batch = batch
-      
-        idx = np.random.choice(np.arange(self.n_col), batch)
+    def sample(self, batch,column_index,column_value_index):
+        if self.n_col == 0: return None #TODO: does this mean we need at least one categorical column?
 
+        if column_index is not None and column_value_index is not None: #If condition is specified we generate sample with such a condition
+            return self.sample_condition(batch, column_index, column_value_index)
+
+        idx = np.random.choice(np.arange(self.n_col), batch)
         vec = np.zeros((batch, self.n_opt), dtype='float32')
-        opt1prime = random_choice_prob_index_sampling(self.p_sampling,idx)
-        
-        for i in np.arange(batch):
-            vec[i, self.interval[idx[i], 0] + opt1prime[i]] = 1
+        opt1prime = random_choice_prob_index_sampling(self.p,idx)
+        vec[np.arange(batch), self.interval[idx, 0] + opt1prime] = 1
             
         return vec
+
+    def sample_condition(self, batch, column_index, column_value_index):
+        
+        cat_index = self.col_to_cat_index[column_index]
+        idx = np.full(batch, cat_index) 
+        vec = np.zeros((batch, self.n_opt), dtype='float32')
+        vec[np.arange(batch), self.interval[idx, 0] + column_value_index] = 1
+
+        return vec # TODO: make it such you do not have to specify
 
 def cond_loss(data, output_info, c, m):
     loss = []
@@ -651,4 +658,51 @@ class CTABGANSynthesizer:
             result  = np.concatenate([result,res],axis=0)
         
         return result[0:n]
+
+
+    def sample2(self, n, column_index = None,column_value_index = None): #TODO: move the column value and indexes to other places
+        
+        self.generator.eval()
+
+        remainding_samples = n
+        samples_to_generate = remainding_samples
+        results = []
+        while samples_to_generate > 0:
+            steps = samples_to_generate // self.batch_size + 1
+            data = self.sample_raw(steps,column_index = None,column_value_index = None)
+            result,_ = self.transformer.inverse_transform(data)
+            results.append(result)
+    
+            remainding_samples = max(0, remainding_samples - len(result))
+            successfull_samples = n - remainding_samples
+            generation_success_rate = successfull_samples / n
+            
+            
+            # We resample another batch using the expected success rate, and add 20% extra samples to account for randomness
+            samples_to_generate = int(remainding_samples // generation_success_rate * 1.2)
+
+        
+        results = np.concatenate(results, axis=0)
+
+        return results[0:n]
+
+    def sample_raw(self, steps, column_index = None,column_value_index = None):
+        output_info = self.transformer.output_info
+        data = []
+        for i in range(steps):
+            noisez = torch.randn(self.batch_size, self.random_dim, device=self.device)
+            condvec = self.cond_generator.sample(self.batch_size, column_index,column_value_index)
+            c = condvec
+            c = torch.from_numpy(c).to(self.device)
+            noisez = torch.cat([noisez, c], dim=1)
+            noisez =  noisez.view(self.batch_size,self.random_dim+self.cond_generator.n_opt,1,1)
+                
+            fake = self.generator(noisez)
+            faket = self.Gtransformer.inverse_transform(fake)
+            fakeact = apply_activate(faket,output_info)
+            data.append(fakeact.detach().cpu().numpy())
+
+        data = np.concatenate(data, axis=0)
+        return data
+
 
