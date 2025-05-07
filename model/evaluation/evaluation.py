@@ -109,12 +109,12 @@ def get_supervised_model(model_name,problem_type,random_state=42):
 
 
 
-def split_data(df, test_ratio=.20, target=None,problem="classification"):
+def split_data(df, test_ratio=.20, target=None,problem="classification",random_state=42):
   if problem == "classification":
     if target is None: raise ValueError("Target column must be specified for classification")
-    train, test = model_selection.train_test_split(df, test_size=test_ratio, stratify=df[target], random_state=42)
+    train, test = model_selection.train_test_split(df, test_size=test_ratio, stratify=df[target], random_state=random_state)
   else:
-    train, test = model_selection.train_test_split(df, test_size=test_ratio, random_state=42)
+    train, test = model_selection.train_test_split(df, test_size=test_ratio, random_state=random_state)
   return train, test
 
 

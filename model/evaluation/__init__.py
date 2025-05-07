@@ -2,6 +2,7 @@
 
 from .evaluation import (
     get_summary_metrics,
+    split_data,
     get_utility_metrics,
     stat_sim,
     alternative_correlation,
@@ -13,6 +14,7 @@ from .evaluation import (
 
 __all__ = [
     "get_summary_metrics",
+    "split_data",
     "get_utility_metrics",
     "stat_sim",
     "alternative_correlation",
