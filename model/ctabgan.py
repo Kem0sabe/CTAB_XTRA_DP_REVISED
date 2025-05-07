@@ -55,8 +55,8 @@ class CTAB_XTRA_DP():
         self.mixed_columns = self.null_value_transformer.fit(self.raw_df, self.categorical_columns, self.mixed_columns)
         self.raw_df = self.null_value_transformer.transform(self.raw_df)
 
-        self.data_prep2 = DataPrep(self.raw_df,self.categorical_columns,self.log_columns)
-        self.prepared_data = self.data_prep2.preprocesses_transform(self.raw_df)
+        self.data_prep = DataPrep(self.raw_df,self.categorical_columns,self.log_columns)
+        self.prepared_data = self.data_prep.preprocesses_transform(self.raw_df)
 
         self.synthesizer.fit(train_data=self.prepared_data,
                     dp_constraints=self.dp_constraints, 
@@ -70,12 +70,18 @@ class CTAB_XTRA_DP():
         print('Finished training in',end_time-start_time," seconds.")
 
 
-    def generate_samples(self,n=1000):
+    def generate_samples(self,n=1000,conditioning_column=None, conditioning_value=None):
+
+        column_index = None
+        column_value_index = None
+        if conditioning_column and conditioning_value:
+            column_index = self.prepared_data.columns.get_loc(conditioning_column) if conditioning_column in self.prepared_data.columns else ValueError("Conditioning column", conditioning_column, "not found in the data columns")
+            column_value_index = self.data_prep.get_label_encoded(column_index, conditioning_value)
         
-        sample_transformed = self.synthesizer.sample(n)#self.synthesizer.sample(n, column_index, column_value_index)
+        sample_transformed = self.synthesizer.sample2(n)#self.synthesizer.sample(n, column_index, column_value_index)
         sample_transformed = pd.DataFrame(sample_transformed, columns=self.prepared_data.columns)
         
-        sample = self.data_prep2.preprocesses_inverse_transform(sample_transformed)
+        sample = self.data_prep.preprocesses_inverse_transform(sample_transformed)
         sample = self.null_value_transformer.inverse_transform(sample)
         sample_with_data_types = self.data_type_assigner.assign(sample)
         
