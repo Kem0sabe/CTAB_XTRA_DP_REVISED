@@ -552,17 +552,7 @@ def privacy_metrics(real,
     if verbose:
       print("\n== Nearest Neighbor Adversarial Accuracy (NNAA) ==")
       print(f"NNAA: {nnaa:.4f}")
-    
-    # Calculate privacy risk score
-    # Higher score indicates lower privacy risk
-    privacy_risk = (fifth_perc_rf / (fifth_perc_rr + fifth_perc_ff) * 2)
-    privacy_summary.append(privacy_risk)
-    
-    if verbose:
-      print(f"\nPrivacy Risk Score: {privacy_risk:.4f}")
-      print("(Higher score indicates better privacy protection)")
-    
-    
+        
     
     
     if verbose:
