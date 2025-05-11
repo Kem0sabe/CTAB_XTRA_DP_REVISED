@@ -32,7 +32,9 @@ def get_summary_metrics(real_train,
                         categorical=[],
                         mixed={},
                         mnar=True,
-                        problem="classification"):
+                        problem="classification",
+                        privacy_data_percent=0.15
+                        ):
 
     simmlarity = stat_sim(real_train,fake,categorical,mixed,mnar)
     if problem == "regression":
@@ -42,7 +44,7 @@ def get_summary_metrics(real_train,
     else:
       raise ValueError("Problem type must be either 'classification' or 'regression'")
     utility = get_utility_metrics(real_train,real_test,[fake],categorical=categorical, mixed=mixed,scaler="MinMax",problem=problem, models=models_to_run,test_ratio=.20)
-    privacy = privacy_metrics(real_train,fake,metric='gower')
+    privacy = privacy_metrics(real_train,fake,metric='gower',data_percent=privacy_data_percent)
     return utility, simmlarity, privacy
 
 
@@ -452,7 +454,7 @@ def _process_mixed_columns(df, mixed, continuous_placeholder='__CONTINUOUS__'):
 def privacy_metrics(real, 
                     fake, 
                     metric = 'gower', 
-                    data_percent=15,
+                    data_percent=0.15,
                     verbose=False):
     """
     Calculate privacy metrics between real and fake datasets.
@@ -474,8 +476,8 @@ def privacy_metrics(real,
     privacy_summary = []
     
     # Sample the data
-    real_refined = real.sample(n=int(len(real)*(.01*data_percent)), random_state=42).to_numpy()
-    fake_refined = fake.sample(n=int(len(fake)*(.01*data_percent)), random_state=42).to_numpy()
+    real_refined = real.sample(n=int(len(real)*data_percent), random_state=42).to_numpy()
+    fake_refined = fake.sample(n=int(len(fake)*data_percent), random_state=42).to_numpy()
     
     if verbose:
       print("==== Privacy Metrics Analysis ====")
