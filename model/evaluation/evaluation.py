@@ -210,12 +210,7 @@ def get_utility_metrics(real_train,
       data_fake_y = fake.loc[:, target].to_numpy()
       data_fake_X = fake.drop(target,axis=1).to_numpy()
      
-      
-      
-      if problem=="classification":
-        X_train_fake, _ , y_train_fake, _ = model_selection.train_test_split(data_fake_X ,data_fake_y, test_size=test_ratio, stratify=data_fake_y,random_state=42) 
-      else:
-        X_train_fake, _ , y_train_fake, _ = model_selection.train_test_split(data_fake_X ,data_fake_y, test_size=test_ratio,random_state=42)  
+    
 
 
       # Apply scaling
@@ -226,11 +221,11 @@ def get_utility_metrics(real_train,
       
       scaler_fake.fit(data_fake_X)
       
-      X_train_fake_scaled = scaler_fake.transform(X_train_fake)
+      X_train_fake_scaled = scaler_fake.transform(data_fake_X)
       
       all_fake_results = []
       for model in models:
-        fake_results = supervised_model_training(X_train_fake_scaled,y_train_fake,X_test_real_scaled,data_real_y_test,model,problem)
+        fake_results = supervised_model_training(X_train_fake_scaled,data_fake_y,X_test_real_scaled,data_real_y_test,model,problem)
         all_fake_results.append(fake_results)
 
       all_fake_results_avg.append(all_fake_results)
