@@ -32,18 +32,14 @@ def get_summary_metrics(real_train,
                         categorical=[],
                         mixed={},
                         mnar=True,
+                        mixed_type=False,
                         problem="classification",
                         privacy_data_percent=0.15
                         ):
 
     simmlarity = stat_sim(real_train,fake,categorical,mixed,mnar)
-    if problem == "regression":
-      models_to_run = ["dt","rf","hgb","cat","xgb"]
-    elif problem == "classification":
-      models_to_run = ["lr","dt","rf","xgb"]
-    else:
-      raise ValueError("Problem type must be either 'classification' or 'regression'")
-    utility = get_utility_metrics(real_train,real_test,[fake],categorical=categorical, mixed=mixed,scaler="MinMax",problem=problem, models=models_to_run,test_ratio=.20)
+    models_to_run = get_models_to_run(problem_type=problem,mixed_type=mixed_type)
+    utility = get_utility_metrics(real_train,real_test,[fake],categorical=categorical, mixed=mixed,scaler="MinMax",problem=problem, models=models_to_run)
     privacy = privacy_metrics(real_train,fake,metric='gower',data_percent=privacy_data_percent)
     return utility, simmlarity, privacy
 
@@ -110,6 +106,19 @@ def get_supervised_model(model_name,problem_type,random_state=42):
   raise ValueError(f"Unknown problem type: {problem_type}. Supported types are 'classification' and 'regression'.")
 
 
+def get_models_to_run(problem_type,mixed_type=False):
+  if problem_type == "classification":
+    if mixed_type:
+      return ["rf","xgb","lgbm","cat"] # Can old use tree based models for mixed data types, sumpement with catboost 
+    else:
+      return ["lr","svm","rf","xgb","lgbm"] # The default models, add a simpler model for a varied set of models
+  if problem_type == "regression":
+    if mixed_type:
+      return ["rf","xgb","lgbm","cat"] # Can old use tree based models for mixed data types, sumpement with catboost 
+    else:
+      return ["lin","lasso","rf","xgb","lgbm"] # The default models, add a simpler model for a varied set of models
+
+  raise ValueError(f"Unknown problem type: {problem_type}. Supported types are 'classification' and 'regression'.")
 
 
 def split_data(df, test_ratio=.20, target=None,problem="classification",random_state=42):
@@ -129,8 +138,7 @@ def get_utility_metrics(real_train,
                         target=None,
                         scaler="MinMax",
                         problem="classification", 
-                        models=["lr","dt","rf","mlp"],
-                        test_ratio=.20):
+                        models=["lr","dt","rf","mlp"]):
 
 
     real_train = real_train.copy()
