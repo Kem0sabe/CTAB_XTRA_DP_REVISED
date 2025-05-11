@@ -68,7 +68,9 @@ class CTAB_XTRA_DP():
         print('Finished training in',end_time-start_time," seconds.")
 
 
-    def generate_samples(self,n=1000,conditioning_column=None, conditioning_value=None):
+    def generate_samples(self,n=None,conditioning_column=None, conditioning_value=None):
+
+        if n is None: n = self.raw_df.shape[0] # if no n is provided, use the same number of rows as the original data        
 
         column_index = None
         column_value_index = None
