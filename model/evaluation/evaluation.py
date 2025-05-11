@@ -310,7 +310,8 @@ def column_similarity(real, fake, categorical=[]):
 
 
     column_stats = []
-    default_columns_weight = 1
+
+    previous_hybrid_feature_continous_weight = 0
     weights = []
     for column in real.columns:
         
@@ -333,19 +334,22 @@ def column_similarity(real, fake, categorical=[]):
             
                 
             js_distance = (distance.jensenshannon(real_pdf_values,fake_pdf_values, 2.0))
- 
-            statistics = [column, "JSD",js_distance, default_columns_weight]
+
+            
+            weight = 1 - previous_hybrid_feature_continous_weight if previous_hybrid_feature_continous_weight else 1 # If we have hybrid column we save the weight for next itteration
+            previous_hybrid_feature_continous_weight = 0 # reset for next iteration
+            statistics = [column, "JSD",js_distance, weight]
     
-            weights.append(default_columns_weight)
+            weights.append(weight)
     
         else:
             scaler = MinMaxScaler()
             scaler.fit(real[column].values.reshape(-1,1))
             l1 = scaler.transform(real[column].values.reshape(-1,1)).flatten()
             l2 = scaler.transform(fake[column].values.reshape(-1,1)).flatten()
-            weight = default_columns_weight
             #TODO: this might drop stuff it should not
             weight = 1 - np.isnan(l1).sum()/len(l1)
+            previous_hybrid_feature_continous_weight = 0 if weight == 1 else weight # If we have hybrid column we save the weight for next itteration
             l1 = l1[~np.isnan(l1)]
             l2 = l2[~np.isnan(l2)]
             w_distance = (wasserstein_distance(l1,l2))
@@ -419,9 +423,15 @@ def _process_mixed_columns(df, mixed, continuous_placeholder='__CONTINUOUS__'):
     
     for col, categories in mixed.items():
         # Create a new categorical column
-        new_cat_col_name = f"{col}_categorical"
         new_cont_col_name = f"{col}_continuous"
+        new_cat_col_name = f"{col}_categorical"
         
+        continuous_series = df_copy[col].apply(
+            lambda x: x if x not in categories else np.nan
+        )
+        df_copy[new_cont_col_name] = continuous_series
+        additional_continuous_cols.append(new_cont_col_name)
+
         # Create a series for categorical values
         categorical_series = df_copy[col].apply(
             lambda x: x if x in categories else continuous_placeholder
@@ -431,11 +441,6 @@ def _process_mixed_columns(df, mixed, continuous_placeholder='__CONTINUOUS__'):
         df_copy[new_cat_col_name] = categorical_series
         additional_categorical_cols.append(new_cat_col_name)
 
-        continuous_series = df_copy[col].apply(
-            lambda x: x if x not in categories else np.nan
-        )
-        df_copy[new_cont_col_name] = continuous_series
-        additional_continuous_cols.append(new_cont_col_name)
 
         # Drop the original column
         df_copy.drop(columns=[col], inplace=True)
