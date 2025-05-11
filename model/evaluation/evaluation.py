@@ -283,10 +283,10 @@ def stat_sim(real,fake,categorical=[],mixed={},mnar=True):
     categorical.extend(additional_categorical_cols)
 
 
-    corr_diff = alternative_correlation(real_processed, fake_processed, columns_to_remove=additional_continuous_cols) 
+    diff_corr_forbenious, diff_corr_mae = alternative_correlation(real_processed, fake_processed, columns_to_remove=additional_continuous_cols) 
     summary, column_stats = column_similarity(real_processed, fake_processed, categorical)
 
-    return summary, column_stats, corr_diff
+    return summary, column_stats, {"forbenious": diff_corr_forbenious, "mae": diff_corr_mae}
 
 
 
@@ -370,7 +370,7 @@ def column_similarity(real, fake, categorical=[]):
     summary = summary.reset_index()
     return summary, column_stats
 
-def alternative_correlation(real, fake, columns_to_remove=[],difference_metric="mae"):
+def alternative_correlation(real, fake, columns_to_remove=[]):
     """
     Calculate the correlation between real and fake datasets
     
@@ -390,17 +390,16 @@ def alternative_correlation(real, fake, columns_to_remove=[],difference_metric="
     real_corr = associations(real, compute_only=True)["corr"]
     fake_corr = associations(fake, compute_only=True)["corr"]
 
-    if difference_metric == "mae":
-        # Calculate absolute difference between correlation matrices
-        diff_matrix = np.abs(real_corr - fake_corr)
-        columnwise_avg_diff = diff_matrix.mean(axis=0)
-        return columnwise_avg_diff.mean()
     
-    if difference_metric == "forbenious":
-        # Calculate Frobenius norm of the difference between correlation matrices
-        return np.linalg.norm(real_corr - fake_corr, ord='fro')
-    
-    raise ValueError(f"Unknown difference metric: {difference_metric}. Supported metrics are 'mae' and 'forbenious'.")
+    # Using forbenious
+    diff_corr_forbenious = np.linalg.norm(real_corr - fake_corr, ord='fro')
+
+    # Caclulate using mean absolute error
+    diff_matrix = np.abs(real_corr - fake_corr)
+    columnwise_avg_diff = diff_matrix.mean(axis=0)
+    diff_corr_mae = columnwise_avg_diff.mean()
+  
+    return diff_corr_forbenious, diff_corr_mae
     
     
 
