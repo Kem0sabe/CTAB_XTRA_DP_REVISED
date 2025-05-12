@@ -53,7 +53,7 @@ def supervised_model_training(x_train, y_train, x_test,
   pred = model.predict(x_test)
 
   if problem_type == "classification":
-    acc = metrics.accuracy_score(y_test,pred)*100
+    acc = metrics.accuracy_score(y_test,pred)
     if len(np.unique(y_train))>2: # We have mulitclass classification
       predict = model.predict_proba(x_test)        
       auc = metrics.roc_auc_score(y_test, predict,average="weighted",multi_class="ovr")
