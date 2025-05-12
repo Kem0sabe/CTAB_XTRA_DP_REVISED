@@ -32,14 +32,13 @@ def get_summary_metrics(real_train,
                         categorical=[],
                         mixed={},
                         mnar=True,
-                        mixed_type=False,
+                        hybrid_type=False,
                         problem="classification",
                         privacy_data_percent=0.15
                         ):
 
     simmlarity = stat_sim(real_train,fake,categorical,mixed,mnar)
-    models_to_run = get_models_to_run(problem_type=problem,mixed_type=mixed_type)
-    utility = get_utility_metrics(real_train,real_test,[fake],categorical=categorical, mixed=mixed,scaler="MinMax",problem=problem, models=models_to_run)
+    utility = get_utility_metrics(real_train,real_test,[fake],categorical=categorical, mixed=mixed,hybrid_type = hybrid_type, scaler="MinMax",problem=problem)
     privacy = privacy_metrics(real_train,fake,metric='gower',data_percent=privacy_data_percent)
     return utility, simmlarity, privacy
 
@@ -106,15 +105,15 @@ def get_supervised_model(model_name,problem_type,random_state=42):
   raise ValueError(f"Unknown problem type: {problem_type}. Supported types are 'classification' and 'regression'.")
 
 
-def get_models_to_run(problem_type,mixed_type=False):
+def get_models_to_run(problem_type,hybrid_type=False):
   if problem_type == "classification":
-    if mixed_type:
-      return ["rf","xgb","lgbm","cat"] # Can old use tree based models for mixed data types, sumpement with catboost 
+    if hybrid_type:
+      return ["rf","xgb","lgbm","cat"] # Can only use tree based models for hybrid data types, sumpement with catboost 
     else:
       return ["lr","svm","rf","xgb","lgbm"] # The default models, add a simpler model for a varied set of models
   if problem_type == "regression":
-    if mixed_type:
-      return ["rf","xgb","lgbm","cat"] # Can old use tree based models for mixed data types, sumpement with catboost 
+    if hybrid_type:
+      return ["rf","xgb","lgbm","cat"] # Can only use tree based models for hybrid data types, sumpement with catboost 
     else:
       return ["lin","lasso","rf","xgb","lgbm"] # The default models, add a simpler model for a varied set of models
 
@@ -129,21 +128,22 @@ def split_data(df, test_ratio=.20, target=None,problem="classification",random_s
     train, test = model_selection.train_test_split(df, test_size=test_ratio, random_state=random_state)
   return train, test
 
-
 def get_utility_metrics(real_train,
                         real_test,
                         fakes,
                         categorical=[],
                         mixed={},
                         target=None,
+                        hybrid_type=False,
                         scaler="MinMax",
-                        problem="classification", 
-                        models=["lr","dt","rf","mlp"]):
+                        problem="classification"):
 
 
     real_train = real_train.copy()
     real_test = real_test.copy()
     categorical = categorical.copy()
+
+    models = get_models_to_run(problem_type=problem,hybrid_type=hybrid_type)
 
     if target is None:
       target = real_train.columns[-1]
