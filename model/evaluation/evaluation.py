@@ -65,10 +65,10 @@ def supervised_model_training(x_train, y_train, x_test,
     return [acc, auc, f1_score] 
   
   if problem_type == "regression":
-    mse = metrics.mean_absolute_percentage_error(y_test,pred)
-    evs = metrics.explained_variance_score(y_test, pred)
+    mse = metrics.mean_squared_error(y_test, pred)
+    mape = metrics.mean_absolute_percentage_error(y_test, pred)
     r2_score = metrics.r2_score(y_test,pred)
-    return [mse, evs, r2_score]
+    return [mse, mape, r2_score]
 
   raise ValueError(f"Unknown problem type: {problem_type}. Supported types are 'classification' and 'regression'.")
 
@@ -193,7 +193,7 @@ def get_utility_metrics(real_train,
     if problem == "classification":
       metrics_list = ["Accuracy", "AUC", "F1-Score"]
     else:
-      metrics_list = ["MAPE", "Explained Variance", "R2 Score"]
+      metrics_list = ["MSE", "MAPE", "R2 Score"]
 
 
     all_real_results = []
