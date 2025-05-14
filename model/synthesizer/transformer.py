@@ -341,7 +341,7 @@ class DataTransformer():
 
     def inverse_transform(self, data):
         data_t = np.zeros([len(data), len(self.meta)], dtype=object)
-        invalid_ids = []
+        invalid_ids_list = []
         st = 0
         for id_, info in enumerate(self.meta):
             if info['type'] == "continuous":
@@ -422,14 +422,14 @@ class DataTransformer():
                         argmax_value = p_argmax[idx]
                         choosen = list(map(info['modal'].__getitem__, [argmax_value]))[0]
                         result[idx] = choosen
-                    else:
+                    else: 
                         std_t = stds[(p_argmax[idx]-len(info['modal']))]
                         mean_t = means[(p_argmax[idx]-len(info['modal']))]
                         result[idx] = u[idx] * 4 * std_t + mean_t
                         continous_values[idx] = result[idx]
                         
                 invalid_ids = np.where(continous_values < info['min'])[0].tolist() + np.where(continous_values > info['max'])[0].tolist()
-
+                invalid_ids_list.extend(invalid_ids)
                 data_t[:, id_] = result
 
             else:
@@ -439,7 +439,7 @@ class DataTransformer():
                 data_t[:, id_] = list(map(info['i2s'].__getitem__, idx))
             
             
-        invalid_ids = np.unique(np.array(invalid_ids)) 
+        invalid_ids = np.unique(np.array(invalid_ids_list)) 
         all_ids = np.arange(0,len(data))
         valid_ids = list(set(all_ids) - set(invalid_ids))
             
